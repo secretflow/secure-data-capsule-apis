@@ -1,0 +1,497 @@
+// Copyright 2023 Ant Group Co., Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+import "secretflowapis/v1/common.proto";
+import "secretflowapis/v1/status.proto";
+import "secretflowapis/v1/sdc/core.proto";
+import "secretflowapis/v1/sdc/digital_envelope.proto";
+
+package secretflowapis.v1.sdc.dataagent;
+
+option java_package = "com.alipay.secretflow.secretflowapis.v1.sdc.dataagent";
+option java_outer_classname = "DataAgentProto";
+
+// 机构注册自己的公钥
+message RegisterInsPubKeyRequest {
+  RequestHeader header = 1;
+  // 机构id,使用 SHA256 对公钥 DER 格式进行哈希，SHA256(DER(pk))
+  string ins_id = 2;
+  // 机构公钥
+  PublicKey public_key = 3;
+  // SIG(ins_id || public_key)
+  bytes signature = 4;
+}
+
+message RegisterInsPubKeyResponse { Status status = 1; }
+
+message GetRaCertPemsRequest {
+  RequestHeader header = 1;
+  // 数据分量个数：
+  //   数据可能会使用秘密分享拆分成多个分量，每个分量都需要使用
+  // 纯 TEE 模式为 1, TECC 模式为 2
+  int32 secret_shard_num = 2;
+
+  // 为防止重放攻击，由客户端提供的随机数
+  repeated string nonces = 3;
+}
+
+message ReportWithCertPem {
+  // 分片 ID
+  int32 secret_shard_id = 1;
+  // certificate, PEM format
+  string cert_pem = 2;
+  // 客户端提供的随机数
+  string nonce = 3;
+  // AECS TEE提供的签名
+  // SIG(cert_pem || nonce)
+  string aecs_tee_signature = 4;
+  string aecs_tee_pubkey = 5;
+  // 内部服务: quote.report_data = SHA256(aecs_tee_pubkey)
+  // 开源tee device: quote.report_data = SHA256(cert_pem || nonce)
+  UnifiedAttestationReport attestation_report = 6;
+}
+
+message GetRaCertPemsResponse {
+  Status status = 1;
+  repeated ReportWithCertPem report_with_certs = 2;
+}
+
+message TeeNodeIndex {
+  // 该节点在本次分布式任务中的组号
+  int32 group_id = 1;
+  // 该节点的角色A-0, B-1, C-2
+  int32 party_id = 2;
+}
+
+message CreateDataWithAuthRequest {
+  RequestHeader header = 1;
+  // 数据信息
+  DataMeta data_info = 2;
+  // 数据授权信息
+  DataAuth data_auth = 3;
+
+  // 公钥和验签时使用的名字，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 4;
+
+  // 数据owner的id
+  string owner_id = 5;
+
+  // 数据 owner 签名
+  // SIG(data_info || data_auth)
+  bytes signature = 6;
+}
+
+message CreateDataWithAuthResponse {
+  Status status = 1;
+  // 数据上传访问 Token
+  DataAccessToken data_access_token = 2;
+  // 数据上传路径
+  DataUri data_uri = 3;
+}
+
+message CreateDataInfoRequest {
+  RequestHeader header = 1;
+  // 数据信息
+  DataMeta data_info = 2;
+
+  // 仅Tecc的分布式节点需要填写
+  // 机构和隐语对此字段不需要赋值
+  TeeNodeIndex tee_node_index = 3;
+
+  // 公钥和验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 4;
+
+  // 数据owner的id
+  string owner_id = 5;
+
+  // 数据 owner 签名
+  // SIG(data_info)
+  bytes signature = 6;
+}
+
+message CreateDataInfoResponse {
+  Status status = 1;
+  // 数据上传访问 Token
+  DataAccessToken data_access_token = 2;
+  // 数据上传路径
+  DataUri data_uri = 3;
+}
+
+message CreateDataAuthRequest {
+  RequestHeader header = 1;
+  // 数据授权信息
+  DataAuth data_auth = 2;
+
+  // 公钥和验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 3;
+
+  // 数据owner的id
+  string owner_id = 4;
+
+  // 数据 owner 签名
+  // SIG(data_auth)
+  bytes signature = 5;
+}
+
+message CreateDataAuthResponse { Status status = 1; }
+
+message FinishDataUploadRequest {
+  RequestHeader header = 1;
+  // 数据上传路径以及上传状态
+  DataUri data_uri = 2;
+
+  // 验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 3;
+
+  // 数据owner的id
+  string owner_id = 4;
+
+  // 数据 owner 签名
+  // SIG(data_uri)
+  bytes signature = 5;
+}
+
+message FinishDataUploadResponse { Status status = 1; }
+
+message DeleteDataRequest {
+  RequestHeader header = 1;
+
+  repeated string data_uuids = 2;
+
+  // 验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 3;
+
+  // 数据owner的id
+  string owner_id = 4;
+
+  // 数据 owner 签名
+  // SIG(data_uuids)
+  bytes signature = 5;
+}
+
+message DeletePartitionDataRequest {
+  RequestHeader header = 1;
+
+  repeated PartitionIdInfo partition_id_infos = 2;
+
+  // 验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 3;
+
+  // 数据owner的id
+  string owner_id = 4;
+
+  // 数据 owner 签名
+  // SIG(partition_id_infos)
+  bytes signature = 5;
+}
+
+message DeleteDataResponse { Status status = 1; }
+
+message CreateExportAuthRequest {
+  RequestHeader header = 1;
+  string data_uuid = 2;
+  repeated string allowed_ins_ids = 3;
+  // 验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 4;
+
+  // 请求者的id
+  string requester_id = 5;
+
+  // SIG(data_uuid || allowed_ins_ids)
+  bytes signature = 6;
+}
+
+message CreateExportAuthResponse { Status status = 1; }
+
+message ExportDataRequest {
+  RequestHeader header = 1;
+  // 数据信息
+  string data_uuid = 2;
+
+  // 验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 3;
+
+  // 请求者的id
+  string requester_id = 4;
+
+  // SIG(requester_priv, data_uuid || requester_id)
+  bytes signature = 5;
+}
+
+message ExportPartitionRequest {
+  RequestHeader header = 1;
+  // 数据信息
+  string data_uuid = 2;
+  // 分区 id
+  string partition_id = 3;
+  // 验签时使用的算法，示例如下：
+  // - SM3withSM2
+  // - SHA256withRSA
+  // - SHA512withRSA
+  string algorithm = 4;
+
+  // 请求者的id
+  string requester_id = 5;
+
+  // SIG(requester_priv, data_uuid || partition_id || requester_id)
+  // 数字类型按照小端字节序进行字节拼接
+  bytes signature = 6;
+}
+
+message ExportDataResponse {
+  Status status = 1;
+  // 数据下载访问 Token
+  DataAccessToken data_access_token = 2;
+  // 数据下载路径以及数据解密密钥
+  //
+  // 如果请求的是 `data_uuid` 下的所有数据(`DataExportRequest`)
+  // `data_uri_with_dk` 中会包含 `data_uuid`
+  // 下所有分区/分段/分量数据的下载路径和解密密钥; 如果请求的是
+  // `data_uuid:partition_id` 下的数据(`PartDataExportRequest`)
+  // `data_uri_with_dk` 中仅包含 `data_uuid:partition_id`
+  // 下所有分段/分量数据的下载路径和解密密钥.
+  DataUri data_uri_with_dk = 3;
+}
+
+// 以下是访问OB的接口
+message GetInsPubKeyRequest {
+  RequestHeader header = 1;
+  string ins_id = 2;
+}
+
+message GetInsPubKeyResponse {
+  Status status = 1;
+  // 机构公钥
+  PublicKey public_key = 2;
+}
+
+// 查询meta_data数据库表中的信息
+message GetDataMetaRequest {
+  RequestHeader header = 1;
+  repeated string data_uuid = 2;
+}
+
+message GetDataMetaResponse {
+  Status status = 1;
+  // 返回db中meta_data表的信息
+  // PartitionDataMeta等无用字段不填
+  repeated DataMeta data_meta = 2;
+}
+
+// 查询data_auth_info数据库表中的信息
+message GetDataAuthRequest {
+  RequestHeader header = 1;
+  repeated string data_uuid = 2;
+}
+
+message GetDataAuthResponse {
+  Status status = 1;
+  repeated DataAuth data_auth = 2;
+}
+
+// 查询export_auth_info数据库表中的信息
+message GetExportAuthRequest {
+  RequestHeader header = 1;
+  message ExportAuthIdInfo {
+    string data_uuid = 1;
+    string granter_ins_id = 2;
+  }
+  repeated ExportAuthIdInfo export_auth_id_infos = 2;
+}
+
+message GetExportAuthResponse {
+  Status status = 1;
+  repeated ExportAuth export_auths = 2;
+}
+
+message GetDataAccessInfoRequest {
+  RequestHeader header = 1;
+  repeated string data_uuids = 2;
+}
+
+message PartitionIdInfo {
+  string data_uuid = 1;
+  // 分区 Id，当 `parition_expr` 为空时有效
+  string partition_id = 2;
+  // 分区表达式
+  //
+  // 1. 读取当前最新分区： maxpt
+  // 2. 读取某个分区：分区格式为 ${yyyymmdd}，时区为 UTC+0, 如 20230404
+  // 3. 读取一个范围的分区：（${yyyymmdd},${yyyymmdd}), 为闭区间，
+  //      如 (20230304,20230404) 表示从 20230304（包含） 到 20230404（包含） 的所有分区
+  // 4. 2 和 3 可以组合以冒号隔开，如 (20230304,20230404);20230201 
+  //      表示从 20230304（包含） 到 20230404（包含）的所有分区以及 20230201 分区
+  string partition_expr = 3;
+}
+
+message SegmentIdsInfo {
+  string data_uuid = 1;
+  string partition_id = 2;
+  repeated int32 segment_ids = 3;
+}
+
+// 查询多个partition下oss token和数据uri，以及用KEK_PUB加密的data_key
+// 由DataAuth查询
+message GetPartitionAccessInfoRequest {
+  RequestHeader header = 1;
+  repeated PartitionIdInfo partition_id_infos = 2;
+}
+
+message GetDataAccessInfoResponse {
+  Status status = 1;
+  // 数据下载访问 Token
+  DataAccessToken data_access_token = 2;
+  // 数据下载路径以及数据解密密钥
+  //
+  // 如果请求的是 `data_uuid` 下的所有数据(`GetDataAccessInfoRequest`)
+  // `data_uri_with_dk` 中会包含 `data_uuid`
+  // 下所有分区/分段/分量数据的下载路径和解密密钥; 如果请求的是
+  // `data_uuid:partition_id` 下的数据(`GetPartitionAccessInfoRequest`)
+  // `data_uri_with_dk` 中仅包含 `data_uuid:partition_id`
+  // 下所有分段/分量数据的下载路径和解密密钥.
+  repeated DataUri data_uri_with_dk = 3;
+}
+
+// TEE worker存储计算结果时需要生成mac key并写入db
+message CreateDataMacKeyRequest {
+  RequestHeader header = 1;
+  string data_uuid = 2;
+  // KEK_PUB_A加密Mac Key的算法
+  string encryption_algorithm = 3;
+  // KEK_PUB_A加密的mac_key,BASE64编码
+  string encrypted_mac_key = 4;
+}
+
+message CreateDataMacKeyResponse { Status status = 1; }
+
+message GetDataMacKeyRequest {
+  RequestHeader header = 1;
+  string data_uuid = 2;
+}
+
+message GetDataMacKeyResponse {
+  Status status = 1;
+  // KEK_PUB_A加密Mac Key的算法
+  string encryption_algorithm = 3;
+  // KEK_PUB_A加密的mac_key,BASE64编码
+  string encrypted_mac_key = 4;
+}
+
+message GetSegmentIdsRequest {
+  RequestHeader header = 1;
+  repeated PartitionIdInfo partition_id_infos = 2;
+}
+
+message GetSegmentIdsResponse {
+  Status status = 1;
+  repeated SegmentIdsInfo segment_ids_infos = 2;
+}
+
+// DataAgent 是一个明文服务，作为访问 TEE 服务的统一入口，并且代理存储 TEE
+// 中的数据，具有以下几个功能模块：
+//  * 远程认证代理（Remote Attestation Proxy）：代理请求
+//    AECS，获取授权管理服务（Auth Management Service）的证书
+//  * 数据存储代理（Data Storage Proxy）：支持 OB 以及 MySQL 作为关系型数据库
+//    backend，存储数据 Meta 信息，并且具有行完整性保护；支持 OSS 作为对象存储
+//    backend，用于存储机构上传的加密数据以及中间结果
+//  * 应用管理（App Management）：负责 TEE 应用管理，注册、注销 TEE 应用
+//
+service DataAgent {
+  // 机构注册公钥请求
+  //
+  //
+  rpc RegisterInsPubKey(RegisterInsPubKeyRequest)
+      returns (RegisterInsPubKeyResponse) {}
+
+  /// 远程认证代理（Remote Attestation Proxy）功能相关接口
+  //
+  //  名词解释：
+  //  * 密钥管理服务，AECS
+  //    AECS 是一个运行在 Enclave 中的密钥管理服务，负责 Enclave
+  //    集群间不同副本间的密钥同步， AECS 会为授权管理服务集群创建一对公私钥。
+  //    AECS 的更多介绍见：TODO
+  //  * TECC 模式
+  //    TECC 模式下的安全假设是同时攻破两个TEE才可攻破系统的安全性，
+  //    因此数据需要以秘密分享的状态存储/计算。
+  //    密钥管理服务以及授权管理服务都需要两实例部署，并且密钥隔离。
+  //
+  //  接口描述：
+  //  * 纯 TEE 模式（secret_shard_num = 1）下，调用`GetRaCertPems`接口可获得
+  //  AECS 的认证报告， 报告中会包含授权管理服务的公钥证书。
+  //  * TECC 模式（secret_shard_num = 2）下，调用`GetRaCertPems`接口可分别获得
+  //  AECS 0 以及 AECS 1 的认证报告，
+  //    各自包含授权管理服务 0 和授权管理服务 1 的公钥证书。
+  rpc GetRaCertPems(GetRaCertPemsRequest) returns (GetRaCertPemsResponse) {}
+
+  /// 创建数据
+  //
+  //  创建数据 Meta 信息，服务端会返回数据上传路径以及上传访问
+  //  Token， 用于后续数据上传
+  rpc CreateDataInfo(CreateDataInfoRequest) returns (CreateDataInfoResponse) {}
+
+  /// 创建数据授权
+  //
+  rpc CreateDataAuth(CreateDataAuthRequest) returns (CreateDataAuthResponse) {}
+
+  /// 创建数据以及数据授权
+  //
+  //  功能为这两个接口的合并(`CreateDataInfo`, `CreateDataAuth`):
+  //  创建数据 Meta 信息以及数据授权信息，服务端会返回数据上传路径以及上传访问
+  //  Token， 用于后续数据上传
+  rpc CreateDataWithAuth(CreateDataWithAuthRequest)
+      returns (CreateDataWithAuthResponse) {}
+
+  // 告知服务数据上传完成
+  rpc FinishDataUpload(FinishDataUploadRequest)
+      returns (FinishDataUploadResponse) {}
+
+  /// 数据下载请求
+  //
+  //  请求者调用本接口获取数据下载路径以及数据解密密钥，Data Agent 会访问 Auth
+  //  Manager 对请求者身份进行鉴权.
+  rpc ExportData(ExportDataRequest) returns (ExportDataResponse) {}
+
+  /// 分区数据下载请求
+  //
+  //  请求者调用本接口获取数据下载路径以及数据解密密钥，Data Agent 会访问 Auth
+  //  Manager 对请求者身份进行鉴权.
+  rpc ExportPartition(ExportPartitionRequest) returns (ExportDataResponse) {}
+}

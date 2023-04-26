@@ -1,0 +1,378 @@
+// Copyright 2023 Ant Group Co., Ltd.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package secretflowapis.v1.sdc;
+
+option java_package = "com.alipay.secretflow.secretflowapis.v1.sdc";
+option java_outer_classname = "CoreProto";
+
+enum PrimitiveDataType {
+  PrimitiveDataType_UNDEFINED = 0;
+
+  // Basic types.
+  DT_FLOAT = 1;  // float
+  DT_UINT8 = 2;  // uint8_t
+  DT_INT8 = 3;   // int8_t
+  DT_UINT16 = 4; // uint16_t
+  DT_INT16 = 5;  // int16_t
+  DT_INT32 = 6;  // int32_t
+  DT_INT64 = 7;  // int64_t
+  DT_STRING = 8; // string
+  DT_BOOL = 9;   // bool
+
+  // IEEE754 half-precision floating-point format (16 bits wide).
+  // This format has 1 sign bit, 5 exponent bits, and 10 mantissa bits.
+  DT_FLOAT16 = 10;
+
+  DT_DOUBLE = 11;
+  DT_UINT32 = 12;
+  DT_UINT64 = 13;
+  DT_COMPLEX64 = 14;  // complex with float32 real and imaginary components
+  DT_COMPLEX128 = 15; // complex with float64 real and imaginary components
+
+  // Non-IEEE floating-point format based on IEEE754 single-precision
+  // floating-point number truncated to 16 bits.
+  // This format has 1 sign bit, 8 exponent bits, and 7 mantissa bits.
+  DT_BFLOAT16 = 16;
+  // DATETIME and TIMESTAMP
+  DT_DATETIME = 17;  // https://dev.mysql.com/doc/refman/8.0/en/datetime.html
+  DT_TIMESTAMP = 18; // seconds since '1970-01-01 00:00:00' UTC
+}
+
+message Field {
+  string name = 1;
+  PrimitiveDataType type = 2;
+}
+
+message Schema {
+  // 对于 CSV 格式的数据，需要指定分隔符
+  string delimiter = 1;
+  repeated Field fields = 2;
+}
+
+/// UnifiedAttestationAttributes collect all attributes information
+/// of trusted application from UnifiedAttestationReport format report.
+/// All attributes is optional when used in UnifiedAttestationPolicy.
+/// The TEE implement decides which attribute is used in repport and policy.
+message UnifiedAttestationAttributes {
+  // The TEE platform, in case some verifier need to verify this.
+  string str_tee_platform = 1 [ json_name = "str_tee_platform" ];
+  // The TEE platform hardware related identity or version
+  string hex_platform_hw_version = 2 [ json_name = "hex_platform_hw_version" ];
+  // The TEE platform TCB software related version
+  string hex_platform_sw_version = 3 [ json_name = "hex_platform_sw_version" ];
+  // The TEE platform security related attribte or flags
+  string hex_secure_flags = 4 [ json_name = "hex_secure_flags" ];
+  // The measurement of TEE implement internal stuffs
+  string hex_platform_measurement = 5
+      [ json_name = "hex_platform_measurement" ];
+  // The measurement of TEE instance boot time stuffs
+  string hex_boot_measurement = 6 [ json_name = "hex_boot_measurement" ];
+  // The TEE instance or trust application identity when generate the reprot
+  string str_tee_identity = 9 [ json_name = "str_tee_identity" ];
+  // The static measurement of trust application when load the code
+  string hex_ta_measurement = 10 [ json_name = "hex_ta_measurement" ];
+  // The dynamical measurement of trust application code,
+  // for example, the real-time measurement of code in secure memory
+  // after the trust application is already run.
+  string hex_ta_dyn_measurement = 11 [ json_name = "hex_ta_dyn_measurement" ];
+  // The measurement or other identity of the trust application signer
+  string hex_signer = 12 [ json_name = "hex_signer" ];
+  // The product ID of the TEE instance or trust application
+  string hex_prod_id = 13 [ json_name = "hex_prod_id" ];
+  // The minimal ISV SVN of the TEE instance or trust application
+  string str_min_isvsvn = 14 [ json_name = "str_min_isvsvn" ];
+  // The bool string "0" for debugable, "1" for not debugable
+  string bool_debug_disabled = 15 [ json_name = "bool_debug_disabled" ];
+  // The user special data for generating attestation report
+  string hex_user_data = 20 [ json_name = "hex_user_data" ];
+  // hex string hash or original pem public key
+  string hex_hash_or_pem_pubkey = 21 [ json_name = "hex_hash_or_pem_pubkey" ];
+  // The idenpendent freshness value beside what in user data
+  string hex_nonce = 22 [ json_name = "hex_nonce" ];
+  // The service provider id, e.g. use in sgx1, 64 bytes hex string
+  string hex_spid = 30 [ json_name = "hex_spid" ];
+}
+
+/// UnifiedAttestationPolicy is used when verify the attestation report.
+/// Both main or nested submodule attester support multi-version of instances.
+message UnifiedAttestationPolicy {
+  // Assume one public key is bound to one report, specify it here.
+  // We can also specify the public key or its hash in main or submodule
+  // UnifiedAttestationAttributes. Public key verification will happen
+  // in both two places.
+  // NOTE: if there is submodule attester, we must specify the public key
+  // here to verify the signature of submode attestation result.
+  string pem_public_key = 1 [ json_name = "pem_public_key" ];
+  // For main attester
+  repeated UnifiedAttestationAttributes main_attributes = 2
+      [ json_name = "main_attributes" ];
+  // For submodule attesters
+  repeated UnifiedAttestationNestedPolicy nested_policies = 3
+      [ json_name = "nested_policies" ];
+}
+
+/// Match rulse for nested report verification
+message UnifiedAttestationNestedPolicy {
+  repeated UnifiedAttestationAttributes sub_attributes = 1
+      [ json_name = "sub_attributes" ];
+}
+
+/// Special Parameters for different TEE platforms, keep consistent with kubetee
+/// attestation.proto
+message UnifiedAttestationReportParams {
+  // The identity string for report instance which is cached inside TEE.
+  // It's optional and usually used in Asynchronous processes.
+  string str_report_identity = 1 [json_name = "str_report_identity"];
+  // The user data in some TEE platforms, Max to 64 Bytes of HEX string.
+  // Users need to convert binary value data to HEX string themselves.
+  string hex_user_data = 2 [json_name = "hex_user_data"];
+  // The JSON serialized string of UnifiedAttestationNestedReports
+  string json_nested_reports = 3 [ json_name = "json_nested_reports" ];
+  // Service Provider ID for SGX1 only
+  string hex_spid = 10 [ json_name = "hex_spid" ];
+}
+
+/// Unified Attestation Report, keep consistent with kubetee attestation.proto
+message UnifiedAttestationReport {
+  // For compatibility and udpate later, current is version "1.0"
+  string str_report_version = 1 [ json_name = "str_report_version" ];
+  // Valid type string: "BackgroundCheck"|"Passport"|"Uas"
+  string str_report_type = 2 [ json_name = "str_report_type" ];
+  // The TEE platform name
+  string str_tee_platform = 3 [ json_name = "str_tee_platform" ];
+  // Different JSON serialized string for each TEE platform
+  // The TEE platforms are in charge of parsing it in their own way.
+  string json_report = 4 [ json_name = "json_report" ];
+  // The JSON serialized string of UnifiedAttestationNestedReports
+  string json_nested_reports = 9 [ json_name = "json_nested_reports" ];
+}
+
+message Ancestor {
+  // 数据 owner 公钥的哈希
+  //
+  // 公钥格式见 RFC5280 中 `SubjectPublicKeyInfo` 结构, 公钥哈希计算如下：
+  // 使用 SHA256 对公钥 DER 格式进行哈希，SHA256(DER(pk))
+  string owner_id = 1;
+  string data_uuid = 2;
+}
+
+message SegmentDataMeta {
+  // 分段 ID
+  int32 segment_id = 1;
+  // 分量 ID
+  int32 secret_shard_id = 2;
+  // 加密数据的密钥
+  // 上传数据：使用 Auth Manager 的公钥加密
+  // 下载数据：使用数据请求者的公钥加密
+  bytes encrypted_data_key = 3;
+  // HMAC(data key, data_uuid || partition_id  ||
+  // segment_id || secret_shard_id || raw data)
+  // int类型转为小端字节序的字节进行拼接
+  // CreateDataInfo时可为空，在Finish时再写入DB
+  bytes mac = 4;
+  // 数据 owner 签名
+  // SIG(data_uuid || partition_id  ||
+  // segment_id || secret_shard_id || data key)
+  bytes signature = 5;
+}
+
+message PartitionDataMeta {
+  // 分区 ID
+  string partition_id = 1;
+  // 分段总数，对于大数据，需要拆分成小的分段进行处理
+  int32 segment_num = 2;
+  // 分段数据
+  repeated SegmentDataMeta segment_data = 3;
+}
+
+message DataMeta {
+  // 数据 uuid 采用 RFC4122(https://www.ietf.org/rfc/rfc4122.txt)
+  // 中基于伪随机数的生成方式 伪随机数算法采用 Mersenne Twister 生成算法
+  //
+  string data_uuid = 1;
+  // 数据 owner 公钥的哈希
+  //
+  // 公钥格式见 RFC5280 中 `SubjectPublicKeyInfo` 结构, 公钥哈希计算如下：
+  // 使用 SHA256 对公钥 DER 格式进行哈希，SHA256(DER(pk))
+  string owner_id = 2;
+  // 数据名称
+  string name = 3;
+  // 数据描述
+  string description = 4;
+  // 数据类型
+  // NONE: not an MPC data
+  // ASS: arithmetic secret shared data
+  string data_type = 5;
+  // 数据来源
+  // USER: 来自机构的数据
+  // TEE: 来自TEE worker的数据
+  string source_type = 6;
+  // 任务号
+  // 如果是来自用户的原始数据，为空
+  // 当数据来源是TEE时，标识生成这个数据的task_id
+  string task_id = 7;
+  // 任务类型
+  // 如果是原始数据，为空
+  // 当数据来源是TEE时，表示生成这个数据的任务类型
+  string task_type = 8;
+  // CSV
+  // OBJ 非结构化数据
+  string data_format = 9;
+  // 分区总数
+  int32 partition_num = 10;
+  // 分量总数, 目前只有两个值 1 or 2
+  // 1 - 表示数据没有拆分量
+  // 2 - TECC中的数据拆了分量
+  int32 secret_shard_num = 11;
+  // 数据 Schema 版本
+  int32 version = 12;
+  // 分区数据
+  repeated PartitionDataMeta partition_data = 13;
+  // 数据的直接祖先
+  // 如果是原始数据，它为空
+  // 如果是中间数据，它是数据集的直接祖先
+  repeated Ancestor ancestors = 14;
+  // 数据的所有祖先
+  // 如果是原始数据，它为空
+  // 如果是中间数据，它是数据集的所有祖先
+  repeated Ancestor all_ancestors = 15;
+  // 数据 Schema, 对于非结构化数据，该字段可不填
+  oneof optional_schema { Schema schema = 16; }
+  // 如果是原始数据，它为空
+  // 如果是中间数据，mac的内容:= HmacSHA256(data_uuid | data_source || ancestor
+  // || all_ancestor)
+  // mac密钥使用data_uuid对应的MAC密钥(记录在数据MAC密钥密文表中）
+  string mac = 17;
+}
+
+message SegmentDataUri {
+  // 分段 ID
+  int32 segment_id = 1;
+  // 分量 ID
+  int32 secret_shard_id = 2;
+  // 数据存储路径
+  string data_uri = 3;
+  // 数据状态
+  // CREATED/UPLOADED/FAILED
+  string status = 4;
+
+  // HMAC(data key, data_uuid || partition_id  ||
+  // segment_id || secret_shard_id || raw data)
+  // int类型转为小端字节序的字节进行拼接
+  // 在FinishDataUpload这一步写入DB
+  // 该字段仅在FinishDataUpload这一步有意义,查询时mac在optional_seg中
+  bytes mac = 5;
+
+  // 段数据 Meta 信息，这是一个可选字段，仅在 `DataExportResponse` 和
+  // `GetDataAccessInfoResponse`中 被使用
+  oneof optional_seg {
+    SegmentDataMeta segment_data_meta = 6;
+    // 明文 data key
+    // TEE/TECC worker 在请求计算参数时需要安全获取 data key, 存储在
+    // `authmanager.ComputeMeta`, 整个结构会使用数字信封保证安全安全通信
+    bytes data_key = 7;
+  }
+}
+
+message PartitionDataUri {
+  // 分区 ID
+  string partition_id = 1;
+  // 分段数据存储位置
+  repeated SegmentDataUri seg_data_uris = 2;
+}
+
+message DataUri {
+  // 数据 UUID
+  string data_uuid = 1;
+  // 分区数据存储位置
+  repeated PartitionDataUri part_data_uris = 2;
+}
+
+/// 应用授权策略
+//  不同种类任务（如 XGB,LR 等）由不同种类的 Enclave 执行, 授权时用户可指定
+//  数据可被哪些 Enclave 执行.
+//
+//  以下字段与 Intel SGX Enclave Identities 对应.
+//  验证过程中以下字段是 AND 的关系, 如果某个字段内容为空，则表示不验证
+message EnclaveInfo {
+  string hex_mrenclave = 2;
+  string hex_mrsigner = 3;
+  string hex_prod_id = 4;
+  int32 min_svn = 5;
+}
+
+message DataAuth {
+  string data_uuid = 1;
+  // 数据提供者的公钥哈希
+  string data_owner_id = 2;
+  // 被授权使用数据的机构公钥哈希
+  repeated string allowed_ins_ids = 3;
+  // 被授权使用的应用信息
+  repeated EnclaveInfo allowed_apps = 4;
+  // XGB/LR
+  repeated string operators = 5;
+  // 内部服务: reserve field
+  // 开源tee device:
+  // {
+  //   "limit_functions":
+  //   [
+  //      {
+  //         "func": base64(sha256(serialized(func)))
+  //      }
+  //   ]
+  // }
+  string extra_limits = 6;
+  // 数据 owner 签名
+  // SIG(data_uuid||allowed_ins_ids||allowed_apps||operators||extra_limits||optional_schema)
+  bytes signature = 7;
+  // 数据 schema, 这里的 Schema 是 DataMeta:schema 的子集，
+  // 授权管理允许只授权部分列作为计算对象, 非结构化数据改字段不填
+  oneof optional_schema { Schema schema = 8; }
+}
+
+message ExportAuth {
+  string data_uuid = 1;
+  string granter_ins_id = 2;
+  repeated string allowed_ins_ids = 3;
+  // granter_ins签名
+  // SIG(data_uuid || granter_inst_id || allowed_ins_ids)
+  bytes signature = 4;
+}
+
+message DataAccessToken {
+  // 目前支持 `oss`
+  string storage_type = 1;
+  // 上传数据所需要的鉴权信息：
+  //   oss: 见 `OssInfo`
+  google.protobuf.Any access_info = 2;
+  // time format
+  // yyyy-MM-dd'T'HH:mm:ss.SSSZ
+  // ex. 2022-09-22T22:02:59.360UTC+08:00
+  string expiration = 3;
+}
+
+message OssInfo {
+  string endpoint = 1;
+  string bucket = 2;
+  // temporary credential for accessing oss
+  string sts_access_key_id = 3;
+  string sts_access_key_secret = 4;
+  string sts_security_token = 5;
+}
