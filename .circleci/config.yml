@@ -79,7 +79,7 @@ workflows:
   publish:
     when: << pipeline.parameters.GHA_Action >>
     jobs:
-      - linux_publish
+      - linux_publis:
           matrix:
             parameters:
               # python_ver: ["3.8", "3.9", "3.10", "3.11"]
