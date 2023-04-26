@@ -45,6 +45,7 @@ jobs:
           name: "Compile proto"
           command: |
             set -ex
+            python3 -m pip install grpcio-tools==1.48.2 mypy-protobuf==3.1.0 protobuf==3.19.4
             bash check.sh
 
   linux_publish:
