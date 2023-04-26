@@ -39,7 +39,6 @@ function generate_and_lint_protodir()
     do
       ${PROTOC} --proto_path=${proto_dir} --cpp_out=${proto_cpp_dir} -I=. ${proto_file} >/dev/null 2>${ERROR_FILE}
       if [ $? -ne 0 ]; then
-        echo "here"
         if [ -f "${ERROR_FILE}" ];then
             cat ${ERROR_FILE}
         fi
