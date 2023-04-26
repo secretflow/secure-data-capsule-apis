@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 PROTO_CPP_OUT=./proto_cpp/
-PROTOC=protoc
+PROTOC=./protoc.py
 ERROR_FILE=error_file
 
 # for exitcode in signal list, perform $your_cmd on exit
