@@ -30,56 +30,57 @@ parameters:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  linux_build:
+  linux_ut:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
-      - image: registry.hub.docker.com/secretflow/ubuntu-base-ci:0.1
+      - image: registry.hub.docker.com/secretflow/ubuntu-base-ci:0.4
     resource_class: large
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+    shell: /bin/bash --login -eo pipefail
     steps:
       - checkout
-      - restore_cache:
-          name: "Restore pip cache"
-          key: &pip-cache pip-{{ checksum "requirements.txt" }}-{{ checksum "dev-requirements.txt" }}
-      - run:
-          name: "Install python deps"
-          command: |
-            set -ex
-            pip install -r python/requirements.txt
-            apt install -y protobuf-compiler
       - run:
           name: "Compile proto"
           command: |
             set -ex
             bash check.sh
-      - save_cache:
-          key: *pip-cache
-          paths:
-            - /usr/local/lib64/python3.8/site-packages
+
   linux_publish:
     docker:
-      - image: registry.hub.docker.com/secretflow/release-ci:0.2
+      - image: registry.hub.docker.com/secretflow/release-ci:0.7
     resource_class: large
+    parameters:
+      python_ver:
+        type: string
+    shell: /bin/bash --login -eo pipefail
     steps:
       - checkout
       - run:
           name: "build package and publish"
           command: |
-            set -ex
-            python3 python/setup.py bdist_wheel
-            python3 -m pip install twine
+            conda create -n build python=<< parameters.python_ver >> -y
+            conda activate build
+            cd python
+            python3 -m pip grpcio-tools==1.48.2 mypy-protobuf==3.1.0 protobuf==3.19.4 twine
+            make build
+            ls dist/*.whl
             python3 -m twine upload -r pypi -u __token__ -p ${PYPI_TWINE_TOKEN} dist/*.whl
+
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  build:
+  ut:
     when:
       not: << pipeline.parameters.GHA_Action >>
     jobs:
-      - linux_build
+      - linux_ut
   publish:
     when: << pipeline.parameters.GHA_Action >>
     jobs:
       - linux_publish
+          matrix:
+            parameters:
+              # python_ver: ["3.8", "3.9", "3.10", "3.11"]
+              python_ver: ["3.8"]

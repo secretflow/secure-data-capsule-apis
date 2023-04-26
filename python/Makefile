@@ -8,9 +8,6 @@ build:
 	python setup.py sdist bdist_wheel
 	twine check dist/*
 
-upload:
-	twine upload -r pypiantfin dist/*
-
 rebuild:
 	make clean
 	make build
