@@ -45,7 +45,8 @@ jobs:
           name: "Verify proto"
           command: |
             set -ex
-            bash check.sh
+            python3 -m pip install grpcio-tools==1.48.2 mypy-protobuf==3.1.0
+            python protoc.py
 
   linux_publish:
     docker:
