@@ -1,0 +1,138 @@
+// Copyright 2023 Ant Group Co., Ltd.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package secretflowapis.v1.sdc.teeapps;
+
+option java_package = "com.alipay.secretflow.secretflowapis.v1.sdc.teeapps";
+option java_outer_classname = "TeeTaskParamsProto";
+
+message TeeTaskParams {
+  message Input {
+    // 数据 ID
+    string data_uuid = 1;
+    // 分区 ID
+    string partition_id = 2;
+    // 特征名
+    repeated string features = 3;
+    // 标签名
+    repeated string labels = 4;
+    // 求交字段(optional)，针对 PSI 算子
+    repeated string id_fields = 5;
+    // 表名(optional),针对 SQL 算子
+    string table_name = 6;
+    // 分区表达式
+    string partition_expr = 7;
+  }
+
+  message Output {
+    // 数据 ID
+    string data_uuid = 1;
+    // 分区 ID
+    string partition_id = 2;
+    // CSV，例如 SQL 的输出
+    // OBJ 非结构化数据，例如 XGB 训练的输出
+    string data_format = 3;
+  }
+
+  string task_id = 1;
+  // 任务发起者公钥哈希
+  string requester_id = 2;
+  // 算子类型，如 XGB, LR，对应 AppInfo::app_type
+  string app_type = 3;
+  // 任务的可编程脚本代码，string，sql 或 python 脚本等
+  // TECC中code为json格式{
+  // session_x_enc_task_script:"****",
+  // iv:"****",
+  // kx_enc_session_x:"****",
+  // script_mac:"****"
+  // }
+  // 开源tee device: code = base64(sha256(serilize(func)))
+  // 内部服务: command
+  string code = 4;
+  // 不同任务参数见 params 目录下，不同任务的定义，如：
+  // xgb 训练任务，对应 XgbHyperParams
+  google.protobuf.Any params = 5;
+  // 输入信息
+  repeated Input inputs = 6;
+  // 输出信息
+  repeated Output outputs = 7;
+  // 任务发起者私钥签名以上字段:
+  // SIGNATURE =
+  // SIG(task_id||requester_id||app_type||code||params||inputs||outputs)
+  //
+  bytes signature = 8;
+  // 原始数据持有者签名
+  // 原始数据持有者Id -> 签名
+  map<string, bytes> data_holder_sigs = 9;
+  // reserved field
+  // TECC pandas中如下形式
+  // {"pandas_result":"result1,result2"}
+  string extra_params = 10;
+}
+
+// 仅TECC使用
+// 分布式任务的每个子任务参数
+message SubTaskParams {
+  TeeTaskParams task_params = 1;
+  message SubInput {
+    // 数据 ID
+    string data_uuid = 1;
+    // 分区 ID
+    string partition_id = 2;
+    // 分段 ID
+    repeated int32 segment_ids = 3;
+  }
+  repeated SubInput sub_inputs = 2;
+
+  message SubOutput {
+    // 数据 ID
+    string data_uuid = 1;
+    // 分区 ID
+    string partition_id = 2;
+    // 输出文件名
+    string output_name = 3;
+  }
+  repeated SubOutput sub_outputs = 3;
+
+  // 仅TECC 使用
+  // 集群信息
+  message AddressInfo {
+    int32 group_id = 1;
+    int32 party_id = 2;
+    string ip = 3;
+    int32 port = 4;
+  }
+
+  // 本次任务分布式组数量
+  int32 nr_group = 4;
+  // 该节点在本次分布式任务中的组号
+  int32 group_id = 5;
+  // 该节点的角色A-0, B-1, C-2
+  int32 party_id = 6;
+  // master组的序号，一般为0
+  int32 master_group = 7;
+  // TECC used only
+  repeated AddressInfo address_infos = 8;
+}
+
+message TeeTaskResponse {
+  string task_id = 1;
+  uint32 result = 2;
+  string message = 3;
+}

@@ -1,0 +1,9 @@
+OPENSOURCE-CLEAN REMOVE 2
+target
+java-protos
+.idea
+build
+dist
+*.egg-info
+.vscode
+python/secretflowapis
