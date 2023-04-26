@@ -7,7 +7,7 @@ def read(fname):
 
 setuptools.setup(
     name = "sdc-apis",
-    version = "0.0.3",
+    version = "0.1.0b0",
     author = "secretflow",
     author_email = "secretflow-contact@service.alipay.com",
     description = "SecretFlow Data Capsule apis proto generated python",
