@@ -1,0 +1,58 @@
+// Copyright 2023 Ant Group Co., Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package secretflowapis.v1.sdc;
+
+
+/// 公钥定义
+//  目前系统中，国密和国际密码标准不会出现混用的情况：
+//   * TECC 当前系统中默认使用 SM2/SM3/SM4 国密算法
+//   * 隐语 当前系统默认使用 RSA/SHA256/AES128 算法
+//  为了简化系统实现，对私钥签名以及公钥加密算法做如下规定：
+//   * 如果 scheme = "SM2", 则
+//     签名算法为： SM3withSM2;
+//     数字信封中对称加密算法为（目前 SM4 没有 GCM 实现）： SM4-CBC, HMAC-SM3
+//   * 如果 scheme = "RSA", 则
+//     签名算法为： SHA256withRSA;
+//     数字信封中对称加密算法为： AES-128-GCM
+message PublicKey {
+  // `RSA`, `SM2`
+  string scheme = 1;
+  // 公钥格式见 RFC5280 中 `SubjectPublicKeyInfo` 结构
+  // pem format
+  string public_key = 2;
+};
+
+/// Digital envelope encryption/decryption data
+message AsymmetricSecret {
+  // Asymmetric encrypted symmetric key
+  bytes asymmetric_encrypted_key = 1;
+  // Symmetric secret
+  SymmetricSecret symmetric_secret = 2;
+}
+
+/// Symmetric encryption/decryption data
+message SymmetricSecret {
+  // Symmetric encryption data
+  bytes encrypted_data = 1;
+  // Symmetric encryption data cmac
+  bytes encrypted_data_cmac = 2;
+  // Initial vector
+  bytes initial_vector = 3;
+  // Additional authentication data(AAD)
+  bytes additional_authentication_data = 4;
+}

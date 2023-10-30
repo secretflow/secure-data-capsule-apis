@@ -1,0 +1,83 @@
+// Copyright 2023 Ant Group Co., Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package secretflowapis.v2.sdc;
+
+// Jwe represents the JSON Web Encryption as specified in RFC 7516
+message Jwe {
+
+  // JWE JOSE Header(Section 4 in RFC 7516)
+  message JoseHeader {
+    // the cryptographic algorithm(Section 4.1.1 in RFC 7515)
+    //
+    // such as "RSA-OAEP-256" or "SM2SM3"
+    string alg = 1 [ json_name = "alg" ];
+
+    // the content encryption algorithm used to perform authenticated encryption
+    // on the plaintext to produce the ciphertext and the Authentication Tag.
+    //
+    // such as "A128GCM" or "SM4GCM"
+    string enc = 2 [ json_name = "enc" ];
+  }
+
+  // RFC4648 BASE64_URL_UNPADDED(UTF8(JWE JOSE Header))
+  // Note: `json_name` refers to RFC 7516(Section 3.2), however the `protected`
+  // is a keywrod in C++, so the `protected_header` is used instead.
+  string protected_header = 1 [ json_name = "protected" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWE Encrypted Key)
+  string encrypted_key = 2 [ json_name = "encrypted_key" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWE Initialization Vector)
+  string iv = 3 [ json_name = "iv" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWE Ciphertext)
+  string ciphertext = 4 [ json_name = "ciphertext" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWE Authentication Tag)
+  string tag = 5 [ json_name = "tag" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWE AAD)
+  string aad = 6 [ json_name = "aad" ];
+}
+
+// Jws represents the JSON Web Signature as specified in RFC 7515
+message Jws {
+  // JWS JOSE Header(Section 4 in RFC 7515)
+  message JoseHeader {
+    // the cryptographic algorithm(Section 4.1.1 in RFC 7515)
+    //
+    // such as "RS256"
+    string alg = 1 [ json_name = "alg" ];
+
+    // The "x5c" (X.509 certificate chain) Header Parameter contains the
+    // X.509 public key certificate or certificate chain [RFC5280]
+    // corresponding to the key used to digitally sign the JWS.
+    repeated string x5c = 2 [ json_name = "x5c" ];
+  }
+
+  // RFC4648 BASE64_URL_UNPADDED(UTF8(JWS JOSE Header))
+  // Note: `json_name` refers to RFC 7515(Section 3.2), however the `protected`
+  // is a keywrod in C++, so the `protected_header` is used instead.
+  string protected_header = 1 [ json_name = "protected" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWS Payload)
+  string payload = 2 [ json_name = "payload" ];
+
+  // RFC4648 BASE64_URL_UNPADDED(JWS Signature)
+  string signature = 3 [ json_name = "signature" ];
+}

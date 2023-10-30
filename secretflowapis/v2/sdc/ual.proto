@@ -1,0 +1,116 @@
+// Copyright 2023 Ant Group Co., Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package secretflowapis.v2.sdc;
+
+/// UnifiedAttestationAttributes collect all attributes information
+/// of trusted application from UnifiedAttestationReport format report.
+/// All attributes is optional when used in UnifiedAttestationPolicy.
+/// The TEE implement decides which attribute is used in repport and policy.
+message UnifiedAttestationAttributes {
+  // The TEE platform, in case some verifier need to verify this.
+  string str_tee_platform = 1 [ json_name = "str_tee_platform" ];
+  // The TEE platform hardware related identity or version
+  string hex_platform_hw_version = 2 [ json_name = "hex_platform_hw_version" ];
+  // The TEE platform TCB software related version
+  string hex_platform_sw_version = 3 [ json_name = "hex_platform_sw_version" ];
+  // The TEE platform security related attribte or flags
+  string hex_secure_flags = 4 [ json_name = "hex_secure_flags" ];
+  // The measurement of TEE implement internal stuffs
+  string hex_platform_measurement = 5
+      [ json_name = "hex_platform_measurement" ];
+  // The measurement of TEE instance boot time stuffs
+  string hex_boot_measurement = 6 [ json_name = "hex_boot_measurement" ];
+  // The TEE instance or trust application identity when generate the reprot
+  string str_tee_identity = 9 [ json_name = "str_tee_identity" ];
+  // The static measurement of trust application when load the code
+  string hex_ta_measurement = 10 [ json_name = "hex_ta_measurement" ];
+  // The dynamical measurement of trust application code,
+  // for example, the real-time measurement of code in secure memory
+  // after the trust application is already run.
+  string hex_ta_dyn_measurement = 11 [ json_name = "hex_ta_dyn_measurement" ];
+  // The measurement or other identity of the trust application signer
+  string hex_signer = 12 [ json_name = "hex_signer" ];
+  // The product ID of the TEE instance or trust application
+  string hex_prod_id = 13 [ json_name = "hex_prod_id" ];
+  // The minimal ISV SVN of the TEE instance or trust application
+  string str_min_isvsvn = 14 [ json_name = "str_min_isvsvn" ];
+  // The bool string "0" for debugable, "1" for not debugable
+  string bool_debug_disabled = 15 [ json_name = "bool_debug_disabled" ];
+  // The user special data for generating attestation report
+  string hex_user_data = 20 [ json_name = "hex_user_data" ];
+  // hex string hash or original pem public key
+  string hex_hash_or_pem_pubkey = 21 [ json_name = "hex_hash_or_pem_pubkey" ];
+  // The idenpendent freshness value beside what in user data
+  string hex_nonce = 22 [ json_name = "hex_nonce" ];
+  // The service provider id, e.g. use in sgx1, 64 bytes hex string
+  string hex_spid = 30 [ json_name = "hex_spid" ];
+}
+
+/// UnifiedAttestationPolicy is used when verify the attestation report.
+/// Both main or nested submodule attester support multi-version of instances.
+message UnifiedAttestationPolicy {
+  // Assume one public key is bound to one report, specify it here.
+  // We can also specify the public key or its hash in main or submodule
+  // UnifiedAttestationAttributes. Public key verification will happen
+  // in both two places.
+  // NOTE: if there is submodule attester, we must specify the public key
+  // here to verify the signature of submode attestation result.
+  string pem_public_key = 1 [ json_name = "pem_public_key" ];
+  // For main attester
+  repeated UnifiedAttestationAttributes main_attributes = 2
+      [ json_name = "main_attributes" ];
+  // For submodule attesters
+  repeated UnifiedAttestationNestedPolicy nested_policies = 3
+      [ json_name = "nested_policies" ];
+}
+
+/// Match rulse for nested report verification
+message UnifiedAttestationNestedPolicy {
+  repeated UnifiedAttestationAttributes sub_attributes = 1
+      [ json_name = "sub_attributes" ];
+}
+
+/// Special Parameters for different TEE platforms, keep consistent with kubetee
+/// attestation.proto
+message UnifiedAttestationReportParams {
+  // The identity string for report instance which is cached inside TEE.
+  // It's optional and usually used in Asynchronous processes.
+  string str_report_identity = 1 [ json_name = "str_report_identity" ];
+  // The user data in some TEE platforms, Max to 64 Bytes of HEX string.
+  // Users need to convert binary value data to HEX string themselves.
+  string hex_user_data = 2 [ json_name = "hex_user_data" ];
+  // The JSON serialized string of UnifiedAttestationNestedReports
+  string json_nested_reports = 3 [ json_name = "json_nested_reports" ];
+  // Service Provider ID for SGX1 only
+  string hex_spid = 10 [ json_name = "hex_spid" ];
+}
+
+/// Unified Attestation Report, keep consistent with kubetee attestation.proto
+message UnifiedAttestationReport {
+  // For compatibility and udpate later, current is version "1.0"
+  string str_report_version = 1 [ json_name = "str_report_version" ];
+  // Valid type string: "BackgroundCheck"|"Passport"|"Uas"
+  string str_report_type = 2 [ json_name = "str_report_type" ];
+  // The TEE platform name
+  string str_tee_platform = 3 [ json_name = "str_tee_platform" ];
+  // Different JSON serialized string for each TEE platform
+  // The TEE platforms are in charge of parsing it in their own way.
+  string json_report = 4 [ json_name = "json_report" ];
+  // The JSON serialized string of UnifiedAttestationNestedReports
+  string json_nested_reports = 9 [ json_name = "json_nested_reports" ];
+}
