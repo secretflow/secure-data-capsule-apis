@@ -115,7 +115,7 @@ message Rule {
     //     "限制在 mr_enclave 为 xgb_enclave_hash 的 Enclave,
     //     中执行，并约束训练迭代次数大于 12"
     // 的描述为：
-    //    r.env.tee.mr_enclave=\"xgb_enclave_hash\" &&
+    //    r.env.tee.sgx.mr_enclave=\"xgb_enclave_hash\" &&
     //    r.xgb.tree_num > 12
     //
     // Note：如果 constraints 为空表示没有限制
@@ -145,7 +145,7 @@ message Rule {
   //    "描述所有算子的限制，如果允许在 mr_signer="xxxx" 的 Enclave 执行，
   //    执行时间限制在 2023-07-22 之前"
   // 描述为：
-  //      r.env.tee.mr_signer=\"xxxx\" &&
+  //      r.env.tee.sgx.mr_signer=\"xxxx\" &&
   //      r.env.execution_time < \"2023-07-22\")
   //
   // Note: 如果 constraints 为空，表示没有额外限制，多条 constraints 之间是 and
