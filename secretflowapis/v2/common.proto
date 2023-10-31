@@ -15,7 +15,7 @@
 
 syntax = "proto3";
 
-package secretflowapis.v1;
+package secretflowapis.v2;
 
 
 // RequestHeader carries the user custom headers.

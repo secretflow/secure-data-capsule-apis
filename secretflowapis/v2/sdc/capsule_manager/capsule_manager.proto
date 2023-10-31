@@ -1,0 +1,409 @@
+// Copyright 2023 Ant Group Co., Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package secretflowapis.v2.sdc.capsule_manager;
+
+import "secretflowapis/v2/common.proto";
+import "secretflowapis/v2/status.proto";
+import "secretflowapis/v2/sdc/ual.proto";
+import "secretflowapis/v2/sdc/jwt.proto";
+
+// This message describes one of the resources required by the task and
+// the resource usage behavior.
+message ResourceRequest {
+  message Resource {
+    // Resource that need to be accessed
+    //
+    // URI format:
+    //    {data_uuid}/{partition_id}/{segment_id}
+    // 因为数据授权按照数据 id 粒度授权，所以 {data_uuid} 必须存在；
+    // * {data_uuid}/* 表示{data_uuid}目录下所有数据
+    // * {data_uuid}/{partition_id}/* 表示 {data_uuid}/{partition_id}
+    // 目录下所有数据
+    // * {data_uuid}/{partition_id}?q=segment_id:["5"+TO+"7"]
+    //   表示 {data_uuid}/{partition_id} 目录下 segment_id 在 5 到 7 的数据
+    string resource_uri = 1 [ json_name = "resource_uri" ];
+
+    // Specify which columns will be used,
+    // if this is a structued data
+    repeated string columns = 2 [ json_name = "columns" ];
+
+    // Application-specific and data-dependent attributes (Json format)
+    //
+    // 可扩展属性字段，用于填充 op
+    // 相关的属性，这些属性作用在当前数据资源上，例如 for PSI，描述 join 的 id
+    // 列
+    //   {
+    //     "join": [
+    //         "join_key": ["id"],
+    //   	     "reference_key": {
+    //     	        "data_uuid": "t2",
+    //     	        "join_key": ["id"]
+    //   	    }
+    //     ]
+    //   }
+    string attrs = 3 [ json_name = "attrs" ];
+  }
+
+  // Identity of task initiator
+  //
+  // BASE58(SHA256(DER(X.509 public key)))
+  string initiator_party_id = 1 [ json_name = "initiator_party_id" ];
+
+  // Corresponding to the `scope` in the `Policy`, only policies
+  // that are the same as the scope take effect
+  string scope = 2 [ json_name = "scope" ];
+
+  // Behavior of operating on this resource
+  //
+  // e.g. PSI, XGB, LR, SQL
+  string op_name = 3 [ json_name = "op_name" ];
+
+  repeated Resource resources = 4 [ json_name = "resources" ];
+
+  // In what environment is the data used (Json format)
+  //
+  // 可扩展属性字段，可用于填充 common 性质的属性，例如：
+  //  项目空间，执行时间，以及 TEE 的身份信息等
+  //  {
+  //  	"execution_time": "2023-07-12T12:00:00",
+  //  	"tee": {
+  //    	   "type": "sgx2",
+  //    	   "mr_enclave": "#####"
+  //  	}
+  //  }
+  string env = 5 [ json_name = "env" ];
+
+  // Application-specific and data-independent attibutes (Json format)
+  //
+  // 可扩展属性字段，用于填充 op 相关的属性，这些属性作用在所有数据上，例如
+  //  for XGB, 描述执行参数：
+  //   {
+  //     "xgb": {
+  //  		  "tree_num": 1
+  //      }
+  //   }
+  string global_attrs = 6 [ json_name = "global_attrs" ];
+}
+
+// Subject to additional constraints described using a DSL, participants are
+// allowed to use the specified columns of this data to participate in the
+// calculation of the specified operator.
+message Rule {
+  message OpConstraint {
+    // e.g. PSI, XGB, LR, SQL
+    string op_name = 1 [ json_name = "op_name" ];
+
+    // DSL decribed additional constraints, working on the specified operator.
+    //
+    // 支持常见逻辑/算数运算表达式，但是表达式使用的属性需要与 `ResourceRequest`
+    // 属性对应，例如对 XGB 算子限制，
+    //     "限制在 mr_enclave 为 xgb_enclave_hash 的 Enclave,
+    //     中执行，并约束训练迭代次数大于 12"
+    // 的描述为：
+    //    r.env.tee.sgx.mr_enclave=\"xgb_enclave_hash\" &&
+    //    r.xgb.tree_num > 12
+    //
+    // Note：如果 constraints 为空表示没有限制
+    repeated string constraints = 2 [ json_name = "constraints" ];
+  }
+
+  string rule_id = 1 [ json_name = "rule_id" ];
+
+  // Identity of grantees
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  repeated string grantee_party_ids = 2 [ json_name = "grantee_party_ids" ];
+
+  // Behavior of operating on this resource
+  //
+  // Note: If ops is empty, no operation is allowed
+  repeated OpConstraint op_constraints = 3 [ json_name = "op_constraints" ];
+
+  // Specify which columns can be used, if this is a structued data
+  //
+  // Note: If columns is empty, no column can be used
+  repeated string columns = 4 [ json_name = "columns" ];
+
+  // Global DSL decribed additional constraints
+  //
+  // 如下限制：
+  //    "描述所有算子的限制，如果允许在 mr_signer="xxxx" 的 Enclave 执行，
+  //    执行时间限制在 2023-07-22 之前"
+  // 描述为：
+  //      r.env.tee.sgx.mr_signer=\"xxxx\" &&
+  //      r.env.execution_time < \"2023-07-22\")
+  //
+  // Note: 如果 constraints 为空，表示没有额外限制，多条 constraints 之间是 and
+  // 语义
+  repeated string global_constraints = 5 [ json_name = "global_constraints" ];
+}
+
+message CreateResultDataKeyRequest {
+  // quote.report_data = SHA256( body )
+  UnifiedAttestationReport attestation_report = 1
+      [ json_name = "attestation_report" ];
+
+  message Body {
+    string owner_id = 1 [ json_name = "owner_id" ];
+
+    string resource_uri = 2 [ json_name = "resource_uri" ];
+
+    string scope = 3 [ json_name = "scope" ];
+
+    // base64(data_key)
+    string data_key_b64 = 4 [ json_name = "data_key_b64" ];
+
+    repeated string ancestor_uuids = 5 [ json_name = "ancestor_uuids" ];
+  }
+  Body body = 2 [ json_name = "body" ];
+}
+
+message Policy {
+  // data identity
+  string data_uuid = 1 [ json_name = "data_uuid" ];
+
+  // 多条规则，至少一条匹配则通过
+  repeated Rule rules = 2 [ json_name = "rules" ];
+}
+
+message GetRaCertRequest {
+  RequestHeader header = 1 [ json_name = "header" ];
+
+  // 为防止重放攻击，由客户端提供的随机数
+  string nonce = 2 [ json_name = "nonce" ];
+}
+
+message GetRaCertResponse {
+  Status status = 1 [ json_name = "status" ];
+
+  // quote.report_data = SHA256( cert || '.' || nonce )
+  UnifiedAttestationReport attestation_report = 2
+      [ json_name = "attestation_report" ];
+
+  // certificate, X.509 PEM format
+  string cert = 3 [ json_name = "cert" ];
+}
+
+message EncryptedRequest {
+  RequestHeader header = 1 [ json_name = "header" ];
+
+  // 需要密文传输的请求，将序列化后的结果加密后存储在这个字段上，考虑到双向认证的情况，
+  // 请求需要带上请求方的签名，可以通过设置 `has_signature` 用于区分。
+  Jwe message = 2 [ json_name = "message" ];
+
+  // 如果 has_signature = True:
+  //    `message` 中是一个嵌套结构 Jwe(Jws(plain_text)),
+  //     即对原文先进行签名，再对签名后的整个结构进行加密；
+  // 如果 has_signature = False:
+  //    `message` 中存储原文密文 Jwe(plain_text)
+  bool has_signature = 3 [ json_name = "has_signature" ];
+}
+
+message EncryptedResponse {
+  Status status = 1 [ json_name = "has_signature" ];
+
+  // 需要密文传输的请求，将序列化后的结果加密后存储在这个字段上
+  Jwe message = 2 [ json_name = "message" ];
+}
+
+message GetDataKeysRequest {
+  // quote.report_data = SHA256( cert || '.' ||
+  //   resource_request )
+  UnifiedAttestationReport attestation_report = 1
+      [ json_name = "attestation_report" ];
+
+  // The temporary self-signed certificate generated by the worker
+  //
+  // X.509 PEM format
+  string cert = 2 [ json_name = "cert" ];
+
+  // Resource request
+  ResourceRequest resource_request = 3 [ json_name = "resource_request" ];
+}
+
+message DataKey {
+  // Requested resource
+  string resource_uri = 1 [ json_name = "resource_uri" ];
+
+  // symmetric key to decrypt the requested resource content
+  // base64(data_key)
+  string data_key_b64 = 2 [ json_name = "data_key_b64" ];
+}
+
+message GetDataKeysResponse {
+  repeated DataKey data_keys = 1 [ json_name = "data_keys" ];
+
+  // The certificate of Capsule Manager
+  //
+  // X.509 PEM format
+  string cert = 2 [ json_name = "cert" ];
+}
+
+message CreateDataPolicyRequest {
+  // Identity of data owner(中间数据使用 Capsule Manager 的公钥生成)
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  // Isolate the policy that takes effect only in this scope
+  //
+  // if scope is empty, default value is "default"
+  string scope = 2 [ json_name = "scope" ];
+
+  Policy policy = 3 [ json_name = "policy" ];
+}
+
+message CreateDataKeysRequest {
+  // Identity of data owner(中间数据使用 Capsule Manager 的公钥生成)
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  repeated DataKey data_keys = 2 [ json_name = "data_keys" ];
+}
+
+message ListDataPolicyRequest {
+  // Identity of data owner
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  string scope = 2 [ json_name = "scope" ];
+}
+
+message ListDataPolicyResponse {
+  repeated Policy policies = 1 [ json_name = "policies" ];
+}
+
+message AddDataRuleRequest {
+  // Identity of data owner
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  // data identity
+  string data_uuid = 2 [ json_name = "data_uuid" ];
+
+  string scope = 3 [ json_name = "scope" ];
+
+  Rule rule = 4 [ json_name = "rule" ];
+}
+
+message DeleteDataPolicyRequest {
+  // Identity of data owner
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  string scope = 2 [ json_name = "scope" ];
+
+  string data_uuid = 3 [ json_name = "data_uuid" ];
+}
+
+message DeleteDataRuleRequest {
+  // Identity of data owner
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  string scope = 2 [ json_name = "scope" ];
+
+  string data_uuid = 3 [ json_name = "data_uuid" ];
+
+  string rule_id = 4 [ json_name = "rule_id" ];
+}
+
+message RegisterCertRequest {
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  // pem format
+  repeated string certs = 2 [ json_name = "certs" ];
+
+  // RSA`, `SM2`
+  string scheme = 3 [ json_name = "scheme" ];
+}
+
+message GetExportDataKeyRequest {
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string request_party_id = 1 [ json_name = "request_party_id" ];
+
+  // Resource that need to be accessed
+  //
+  // URI format:
+  //    {data_uuid}/{partition_id}/{segment_id}
+  // 因为数据授权按照数据 id 粒度授权，所以 {data_uuid} 必须存在
+  string resource_uri = 2 [ json_name = "resource_uri" ];
+
+  // Data Export Certificate
+  //
+  // When the data request exporting party requests to obtain the decryption key
+  // for accessing the data, they need to obtain the signatures of all the
+  // original owners of the data, the request information, and the signature of
+  // the original owner, which together constitute the data export certificate.
+  //
+  // The current definition of the data export certificate is `VoteResult`.
+  string data_export_certificate = 3 [ json_name = "data_export_certificate" ];
+}
+
+message GetExportDataKeyResponse {
+  DataKey data_key = 1 [ json_name = "data_key" ];
+}
+
+message DeleteDataKeyRequest {
+  // Identity of data owner
+  //
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
+  string owner_party_id = 1 [ json_name = "owner_party_id" ];
+
+  // URI format:
+  //    {data_uuid}/{partition_id}/{segment_id}
+  // 因为数据授权按照数据 id 粒度授权，所以 {data_uuid} 必须存在
+  string resource_uri = 2 [ json_name = "resource_uri" ];
+}
+
+service CapsuleManager {
+  // 功能：请求 CapsuleManager、返回RA报告、证书
+  rpc GetRaCert(GetRaCertRequest) returns (GetRaCertResponse) {}
+
+  // The following services are implemented for TEE apps. TEE apps communicate
+  // with server via digital envelops. TEE apps send self-generated public key
+  // with RA report to server. Server then uses this public key to encrypt
+  // requested data back to TEE apps.
+  rpc GetDataKeys(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc CreateResultDataKey(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc CreateDataPolicy(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc ListDataPolicy(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc AddDataRule(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc DeleteDataPolicy(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc DeleteDataRule(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc CreateDataKeys(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc RegisterCert(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc GetExportDataKey(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc DeleteDataKey(EncryptedRequest) returns (EncryptedResponse) {}
+}

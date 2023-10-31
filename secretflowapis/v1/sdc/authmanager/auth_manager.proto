@@ -24,8 +24,6 @@ import "secretflowapis/v1/sdc/teeapps/tee_task_params.proto";
 
 package secretflowapis.v1.sdc.authmanager;
 
-option java_package = "com.alipay.secretflow.secretflowapis.v1.sdc.authmanager";
-option java_outer_classname = "AuthManagerProto";
 
 message GetExportDataKeyRequest {
   RequestHeader header = 1;
@@ -62,8 +60,8 @@ message ComputeMeta {
     // The data storage path and the corresponding data decryption key
     DataUri data_uri_with_dks = 2;
   }
-  // data_uuid -> meta
-  map<string, InputMeta> input_metas = 3;
+  // The order of `input_metas` is same to `TeeTaskParams.inputs`.
+  repeated InputMeta input_metas = 3;
 
   // The public key of AuthManager
   //
