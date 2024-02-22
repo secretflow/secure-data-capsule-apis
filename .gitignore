@@ -7,3 +7,4 @@ dist
 *.egg-info
 .vscode
 python/secretflowapis
+Cargo.lock
