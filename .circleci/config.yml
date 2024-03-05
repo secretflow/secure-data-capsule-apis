@@ -50,7 +50,7 @@ jobs:
 
   linux_publish:
     docker:
-      - image: registry.hub.docker.com/secretflow/release-ci:0.7
+      - image: registry.hub.docker.com/secretflow/release-ci:latest
     resource_class: large
     parameters:
       python_ver:
@@ -84,4 +84,4 @@ workflows:
           matrix:
             parameters:
               # python_ver: ["3.8", "3.9", "3.10", "3.11"]
-              python_ver: ["3.8"]
+              python_ver: ["3.8", "3.9", "3.10", "3.11"]
