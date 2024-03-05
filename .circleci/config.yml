@@ -34,7 +34,7 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
-      - image: registry.hub.docker.com/secretflow/ubuntu-base-ci:latest
+      - image: secretflow/trustflow-ci-ubuntu20.04:0.1.0b
     resource_class: large
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
@@ -50,7 +50,7 @@ jobs:
 
   linux_publish:
     docker:
-      - image: registry.hub.docker.com/secretflow/release-ci:latest
+      - image: secretflow/trustflow-ci-ubuntu20.04:0.1.0b
     resource_class: large
     parameters:
       python_ver:
