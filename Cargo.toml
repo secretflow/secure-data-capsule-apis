@@ -4,7 +4,7 @@ version = "0.2.1-dev20240222"
 edition = "2021"
 description = "SecretFlow Data Capsule apis proto generated Rust"
 readme = "README.md"
-repository = "https://github.com/zheyang0825/secure-data-capsule-apis.git"
+repository = "https://github.com/secretflow/secure-data-capsule-apis.git"
 license-file = "LICENSE"
 include = ["secretflowapis", "lib.rs", "build.rs"]
 
