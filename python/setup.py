@@ -9,7 +9,7 @@ def read(fname):
 
 setuptools.setup(
     name="sdc-apis",
-    version="0.2.0.dev20230930",
+    version="0.2.1.dev20240305",
     author="secretflow",
     author_email="secretflow-contact@service.alipay.com",
     description="SecretFlow Data Capsule apis proto generated python",
@@ -24,5 +24,8 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
+    options={
+        "bdist_wheel": {"plat_name": "manylinux2014_x86_64"},
+    },
     include_package_data=True,
 )

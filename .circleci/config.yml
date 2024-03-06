@@ -34,7 +34,7 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
-      - image: registry.hub.docker.com/secretflow/ubuntu-base-ci:0.4
+      - image: secretflow/trustedflow-dev-ubuntu22.04:latest
     resource_class: large
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
@@ -50,7 +50,7 @@ jobs:
 
   linux_publish:
     docker:
-      - image: registry.hub.docker.com/secretflow/release-ci:0.7
+      - image: secretflow/trustedflow-dev-ubuntu22.04:latest
     resource_class: large
     parameters:
       python_ver:
@@ -61,6 +61,7 @@ jobs:
       - run:
           name: "build package and publish"
           command: |
+            source /root/miniconda3/etc/profile.d/conda.sh
             conda create -n build python=<< parameters.python_ver >> -y
             conda activate build
             cd python
