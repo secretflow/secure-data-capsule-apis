@@ -45,26 +45,24 @@ jobs:
           name: "Verify proto"
           command: |
             set -ex
-            python3 -m pip install grpcio-tools==1.48.2 mypy-protobuf==3.1.0
+            python3 -m pip install grpcio-tools mypy-protobuf "protobuf>=4,<5"
             python protoc.py
 
   linux_publish:
     docker:
       - image: secretflow/release-ci:latest
     resource_class: large
-    parameters:
-      python_ver:
-        type: string
     shell: /bin/bash --login -eo pipefail
     steps:
       - checkout
       - run:
           name: "build package and publish"
           command: |
-            conda create -n build python=<< parameters.python_ver >> -y
+            source /root/miniconda3/etc/profile.d/conda.sh
+            conda create -n build python=3.10 -y
             conda activate build
             cd python
-            python3 -m pip install grpcio-tools==1.48.2 mypy-protobuf==3.1.0 protobuf==3.19.4 twine
+            python3 -m pip install grpcio-tools mypy-protobuf "protobuf>=4,<5" twine
             make build
             ls dist/*.whl
             python3 -m twine upload -r pypi -u __token__ -p ${PYPI_TWINE_TOKEN} dist/*.whl
@@ -80,8 +78,4 @@ workflows:
   publish:
     when: << pipeline.parameters.GHA_Action >>
     jobs:
-      - linux_publish:
-          matrix:
-            parameters:
-              # python_ver: ["3.8", "3.9", "3.10", "3.11"]
-              python_ver: ["3.8"]
+      - linux_publish
