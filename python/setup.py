@@ -1,15 +1,23 @@
 import setuptools
-import os
+from pathlib import Path
+from datetime import date
+
+__version__ = "0.2.1.dev$$DATE$$"
+
+
+def get_version():
+    date_str = date.today().strftime("%Y%m%d")
+    return __version__.replace("$$DATE$$", date_str)
 
 
 def read(fname):
-    with open(os.path.join(os.path.dirname(__file__), fname)) as f:
+    with open(Path(__file__).resolve().parent / Path(fname)) as f:
         return f.read()
 
 
 setuptools.setup(
     name="sdc-apis",
-    version="0.2.1.dev240320",
+    version=get_version(),
     author="secretflow",
     author_email="secretflow-contact@service.alipay.com",
     description="SecretFlow Data Capsule apis proto generated python",

@@ -1,0 +1,4 @@
+-r requirements.txt
+grpcio-tools
+mypy-protobuf
+twine

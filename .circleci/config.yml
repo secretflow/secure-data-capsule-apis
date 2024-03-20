@@ -45,8 +45,8 @@ jobs:
           name: "Verify proto"
           command: |
             set -ex
-            python3 -m pip install grpcio-tools mypy-protobuf "protobuf>=4,<5"
-            python protoc.py
+            python3 -m pip install -r ./python/dev-requirements.txt
+            python3 protoc.py
 
   linux_publish:
     docker:
@@ -62,7 +62,7 @@ jobs:
             conda create -n build python=3.10 -y
             conda activate build
             cd python
-            python3 -m pip install grpcio-tools mypy-protobuf "protobuf>=4,<5" twine
+            python3 -m pip install -r dev-requirements.txt
             make build
             ls dist/*.whl
             python3 -m twine upload -r pypi -u __token__ -p ${PYPI_TWINE_TOKEN} dist/*.whl
