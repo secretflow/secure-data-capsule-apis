@@ -6,18 +6,18 @@ def read(fname):
         return f.read()
 
 setuptools.setup(
-    name = "sdc-apis",
-    version = "0.1.0b0",
-    author = "secretflow",
-    author_email = "secretflow-contact@service.alipay.com",
-    description = "SecretFlow Data Capsule apis proto generated python",
-    long_description_content_type = 'text/markdown',
-    long_description = 'SecretFlow Data Capsule apis proto generated python',
-    license = "Apache 2.0",
-    url = "https://github.com/secretflow/secure-data-capsule-apis",
-    packages = setuptools.find_packages(),
-    install_requires = read('requirements.txt'),
-    classifiers = [
+    name="sdc-apis",
+    version="0.1.0.dev240320",
+    author="secretflow",
+    author_email="secretflow-contact@service.alipay.com",
+    description="SecretFlow Data Capsule apis proto generated python",
+    long_description_content_type="text/markdown",
+    long_description="SecretFlow Data Capsule apis proto generated python",
+    license="Apache 2.0",
+    url="https://github.com/secretflow/secure-data-capsule-apis",
+    packages=setuptools.find_packages(),
+    install_requires=read("requirements.txt"),
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
