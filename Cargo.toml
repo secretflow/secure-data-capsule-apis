@@ -1,6 +1,6 @@
 [package]
 name = "sdc_apis"
-version = "0.2.1-dev20240222"
+version = "0.3.0-dev20241104"
 edition = "2021"
 description = "SecretFlow Data Capsule apis proto generated Rust"
 readme = "README.md"
