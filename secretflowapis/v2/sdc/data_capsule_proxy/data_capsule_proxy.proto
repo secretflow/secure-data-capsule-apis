@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package secretflowapis.v2.sdc.data_capsule_proxy;
+
+option cc_generic_services = true;
+
+import "secretflowapis/v2/common.proto";
+import "secretflowapis/v2/status.proto";
+
+message CmResourceConfig {
+  // Capsule Manager endpoint. eg. http://127.0.0.1:8080
+  string endpoint = 1 [ json_name = "endpoint" ];
+  // Corresponding to the `scope` in the CM `Policy`, only policies
+  // that are the same as the scope take effect
+  string scope = 2 [ json_name = "scope" ];
+  // Behavior of operating on this resource
+  //
+  // e.g. llm-serving, llm-train
+  string op_name = 3 [ json_name = "op_name" ];
+
+  // Resource_uri of data keys
+  string resource_uri = 4 [ json_name = "resource_uri" ];
+
+  // Specify which columns will be used,
+  // if this is a structued data
+  repeated string columns = 5 [ json_name = "columns" ];
+
+  // Application-specific and data-independent attibutes (Json format)
+  //
+  // 可扩展属性字段，用于填充 op 相关的属性，这些属性作用在所有数据上，例如
+  //  for XGB, 描述执行参数：
+  //   {
+  //     "xgb": {
+  //  		  "tree_num": 1
+  //      }
+  //   }
+  string global_attrs = 6 [ json_name = "global_attrs" ];
+}
+
+message CmResultConfig {
+  // Capsule Manager endpoint. eg. http://127.0.0.1:8080
+  string endpoint = 1 [ json_name = "endpoint" ];
+  // Corresponding to the `scope` in the CM `Policy`, only policies
+  // that are the same as the scope take effect
+  string scope = 2 [ json_name = "scope" ];
+  // Resource_uri of the output data
+  string resource_uri = 3 [ json_name = "resource_uri" ];
+  // The ancestor uuids of resource_uri
+  repeated string ancestor_uuids = 4 [ json_name = "ancestor_uuids" ];
+}
+
+message LocalFSConfig {
+  // local data path. 
+  // It can be a file name or dir name.
+  string path = 1 [json_name = "path"];
+}
+
+message S3Config {
+  // endpoint 
+  string endpoint = 1 [json_name = "endpoint"];
+  // the bucket name of the oss datasource
+  string bucket = 2 [json_name = "bucket"];
+  // remote data path
+  // It can be a file name or dir name.
+  string path = 3 [json_name = "path"];
+  // access key or sts access key
+  string access_key_id = 4 [json_name = "access_key_id"];
+  // access secret or sts access key
+  string access_key_secret = 5 [json_name = "access_key_secret"];
+  // sts token
+  string sts_token = 6 [json_name = "sts_token"];
+}
+
+message GetInputDataRequest {
+  RequestHeader header = 1 [ json_name = "header" ];
+
+  oneof data_key_config {
+    // AES128 Data key in RFC4648 base64 format
+    string data_key_b64 = 2 [ json_name = "data_key_b64" ];
+    // Capsule manager's resource config
+    CmResourceConfig cm_resource_config = 3 [ json_name = "cm_resource_config" ];
+  }
+  
+  // For local_fs_config, just get data keys and decrypt.
+  // For s3_config, files will be downloaded first.
+  oneof source_config {
+    LocalFSConfig local_fs_config = 4 [ json_name = "local_fs_config" ];
+    S3Config s3_config = 5 [ json_name = "s3_config" ];
+  }
+
+  // The directory which store result plaintext data
+  LocalFSConfig dest_config = 6 [ json_name = "dest_config" ]; 
+}
+
+message GetInputDataResponse {
+  Status status = 1 [ json_name = "status" ];
+}
+
+message PutResultDataRequest {
+  RequestHeader header = 1 [ json_name = "header" ];
+  // AES128 Data key in RFC4648 base64 format
+  string data_key_b64 = 2 [ json_name = "data_key_b64" ];
+  // Capsule manager's result config
+  CmResultConfig cm_result_config = 3 [ json_name = "cm_result_config" ];
+  // Local result in plaintext
+  LocalFSConfig source_config = 4 [ json_name = "source_config" ]; 
+  // For local_fs_config, just encrypt data.
+  // For s3_config, files will be uploaded after encryption.
+  oneof dest_config {
+    LocalFSConfig local_fs_config = 5 [ json_name = "local_fs_config" ];
+    S3Config s3_config = 6 [ json_name = "s3_config" ];
+  }
+}
+
+message PutResultDataResponse {
+  Status status = 1 [ json_name = "status" ];
+}
+
+
+service DataCapsuleProxy {
+  rpc GetInputData(GetInputDataRequest) returns (GetInputDataResponse);
+  rpc PutResultData(PutResultDataRequest) returns (PutResultDataResponse);
+}

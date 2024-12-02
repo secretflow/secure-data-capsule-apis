@@ -2,7 +2,7 @@ import setuptools
 from pathlib import Path
 from datetime import date
 
-__version__ = "0.2.1.dev$$DATE$$"
+__version__ = "0.3.0.dev$$DATE$$"
 
 
 def get_version():

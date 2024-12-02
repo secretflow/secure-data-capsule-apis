@@ -61,7 +61,7 @@ message ResourceRequest {
 
   // Identity of task initiator
   //
-  // BASE58(SHA256(DER(X.509 public key)))
+  // RFC4648 BASE32(SHA256(DER(X.509 public key)))
   string initiator_party_id = 1 [ json_name = "initiator_party_id" ];
 
   // Corresponding to the `scope` in the `Policy`, only policies
@@ -215,7 +215,7 @@ message EncryptedRequest {
 }
 
 message EncryptedResponse {
-  Status status = 1 [ json_name = "has_signature" ];
+  Status status = 1 [ json_name = "status" ];
 
   // 需要密文传输的请求，将序列化后的结果加密后存储在这个字段上
   Jwe message = 2 [ json_name = "message" ];
@@ -252,6 +252,45 @@ message GetDataKeysResponse {
   //
   // X.509 PEM format
   string cert = 2 [ json_name = "cert" ];
+}
+
+message GetTlsAssetRequest {
+  // quote.report_data = SHA256( cert || '.' ||
+  //   resource_request )
+  UnifiedAttestationReport attestation_report = 1
+      [ json_name = "attestation_report" ];
+
+  // The certificate of tee apps
+  //
+  // X.509 PEM format
+  // This cert is used to encrypt the response. 
+  // Placing it within the report ensures that the cert is guaranteed by tee.
+  string cert = 2 [ json_name = "cert" ];
+
+  // Resource request
+  ResourceRequest resource_request = 3 [ json_name = "resource_request" ];
+}
+
+message TlsAsset {
+  // TLS cert. X.509 PEM format
+  string cert = 1 [ json_name = "cert" ];
+
+  // TLS private key. PKCS8 PEM format
+  string private_key = 2 [ json_name = "private_key" ];
+}
+
+message GetTlsAssetResponse {
+  // Data keys correspond to resource_request
+  repeated DataKey data_keys = 1 [ json_name = "data_keys" ];
+  
+  TlsAsset tls_asset = 2 [json_name = "tls_asset"];
+
+  // The certificate of Capsule Manager
+  //
+  // X.509 PEM format
+  // It should be same as the cert in GetRaCertResponse.
+  // We assume the server who has correct data keys is the trusted CM.
+  string cert = 3 [ json_name = "cert" ];
 }
 
 message CreateDataPolicyRequest {
@@ -386,6 +425,8 @@ service CapsuleManager {
   // with RA report to server. Server then uses this public key to encrypt
   // requested data back to TEE apps.
   rpc GetDataKeys(EncryptedRequest) returns (EncryptedResponse) {}
+
+  rpc GetTlsAsset(EncryptedRequest) returns (EncryptedResponse) {}
 
   rpc CreateResultDataKey(EncryptedRequest) returns (EncryptedResponse) {}
 

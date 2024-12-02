@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package secretflowapis.v2.sdc.ra_proxy;
+
+option cc_generic_services = true;
+
+import "secretflowapis/v2/common.proto";
+import "secretflowapis/v2/status.proto";
+import "secretflowapis/v2/sdc/ual.proto";
+
+message GetRaCertRequest {
+  RequestHeader header = 1 [ json_name = "header" ];
+
+  // 为防止重放攻击，由客户端提供的随机数
+  string nonce = 2 [ json_name = "nonce" ];
+}
+
+message GetRaCertResponse {
+  Status status = 1 [ json_name = "status" ];
+
+  // quote.report_data = SHA256( cert || '.' || nonce )
+  UnifiedAttestationReport attestation_report = 2
+      [ json_name = "attestation_report" ];
+
+  // certificate, X.509 PEM format
+  string cert = 3 [ json_name = "cert" ];
+}
+
+service RaProxy {
+  // 功能：请求 CapsuleManager、返回RA报告、证书
+  rpc GetRaCert(GetRaCertRequest) returns (GetRaCertResponse) {}
+}
