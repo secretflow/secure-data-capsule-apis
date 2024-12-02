@@ -1,6 +1,3 @@
-# OPENSOURCE-CLEANUP REMOVE 2
-target
-java-protos
 .idea
 build
 dist
