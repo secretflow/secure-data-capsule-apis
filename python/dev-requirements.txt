@@ -1,4 +1,4 @@
 -r requirements.txt
-grpcio-tools==1.62.3
-mypy-protobuf==3.6.0
 twine==5.1.1
+grpcio-tools
+mypy-protobuf
