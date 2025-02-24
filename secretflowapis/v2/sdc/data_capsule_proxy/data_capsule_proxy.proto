@@ -69,27 +69,31 @@ message S3Config {
   string access_key_secret = 5 [json_name = "access_key_secret"];
   // sts token
   string sts_token = 6 [json_name = "sts_token"];
+  // region
+  string region = 7 [json_name = "region"];
 }
 
 message GetInputDataRequest {
   RequestHeader header = 1 [ json_name = "header" ];
 
+  bool need_decrypt = 2 [ json_name = "need_decrypt" ];
+
   oneof data_key_config {
     // AES128 Data key in RFC4648 base64 format
-    string data_key_b64 = 2 [ json_name = "data_key_b64" ];
+    string data_key_b64 = 3 [ json_name = "data_key_b64" ];
     // Capsule manager's resource config
-    CmResourceConfig cm_resource_config = 3 [ json_name = "cm_resource_config" ];
+    CmResourceConfig cm_resource_config = 4 [ json_name = "cm_resource_config" ];
   }
   
   // For local_fs_config, just get data keys and decrypt.
   // For s3_config, files will be downloaded first.
   oneof source_config {
-    LocalFSConfig local_fs_config = 4 [ json_name = "local_fs_config" ];
-    S3Config s3_config = 5 [ json_name = "s3_config" ];
+    LocalFSConfig local_fs_config = 5 [ json_name = "local_fs_config" ];
+    S3Config s3_config = 6 [ json_name = "s3_config" ];
   }
 
   // The directory which store result plaintext data
-  LocalFSConfig dest_config = 6 [ json_name = "dest_config" ]; 
+  LocalFSConfig dest_config = 7 [ json_name = "dest_config" ]; 
 }
 
 message GetInputDataResponse {
@@ -98,17 +102,18 @@ message GetInputDataResponse {
 
 message PutResultDataRequest {
   RequestHeader header = 1 [ json_name = "header" ];
+  bool need_encrypt = 2 [ json_name = "need_encrypt" ];
   // AES128 Data key in RFC4648 base64 format
-  string data_key_b64 = 2 [ json_name = "data_key_b64" ];
+  string data_key_b64 = 3 [ json_name = "data_key_b64" ];
   // Capsule manager's result config
-  CmResultConfig cm_result_config = 3 [ json_name = "cm_result_config" ];
+  CmResultConfig cm_result_config = 4 [ json_name = "cm_result_config" ];
   // Local result in plaintext
-  LocalFSConfig source_config = 4 [ json_name = "source_config" ]; 
+  LocalFSConfig source_config = 5 [ json_name = "source_config" ]; 
   // For local_fs_config, just encrypt data.
   // For s3_config, files will be uploaded after encryption.
   oneof dest_config {
-    LocalFSConfig local_fs_config = 5 [ json_name = "local_fs_config" ];
-    S3Config s3_config = 6 [ json_name = "s3_config" ];
+    LocalFSConfig local_fs_config = 6 [ json_name = "local_fs_config" ];
+    S3Config s3_config = 7 [ json_name = "s3_config" ];
   }
 }
 
