@@ -21,5 +21,5 @@ package secretflowapis.v2;
 // RequestHeader carries the user custom headers.
 message RequestHeader {
   // Custom headers used to record custom information.
-  map<string, string> custom_headers = 1;
+  map<string, string> custom_headers = 1 [ json_name = "custom_headers" ];
 }
