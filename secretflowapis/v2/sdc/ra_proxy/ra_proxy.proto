@@ -13,6 +13,9 @@ message GetRaCertRequest {
 
   // 为防止重放攻击，由客户端提供的随机数
   string nonce = 2 [ json_name = "nonce" ];
+
+  // 是否根据nonce重新生成RA报告, 若为false则直接返回缓存的RA报告
+  bool refresh_ra_report = 3 [ json_name = "refresh_ra_report" ];
 }
 
 message GetRaCertResponse {
