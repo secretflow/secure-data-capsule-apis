@@ -39,12 +39,3 @@ dev = [
     "grpcio-tools",
     "twine>=5.1",
 ]
-
-[[tool.uv.index]]
-url = "https://mirrors.aliyun.com/pypi/simple/"
-default = true
-
-# some internal packages
-[[tool.uv.index]]
-name = "antgroup"
-url = "https://artifacts.antgroup-inc.cn/artifact/repositories/simple-dev/"
