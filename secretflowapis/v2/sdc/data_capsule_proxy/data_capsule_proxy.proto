@@ -55,6 +55,12 @@ message LocalFSConfig {
   string path = 1 [json_name = "path"];
 }
 
+enum S3StorageType {
+  S3_STORAGE_TYPE_UNSPECIFIED = 0;
+  S3_STORAGE_TYPE_OSS = 1;
+  S3_STORAGE_TYPE_MINIO = 2;
+}
+
 message S3Config {
   // endpoint 
   string endpoint = 1 [json_name = "endpoint"];
@@ -71,6 +77,12 @@ message S3Config {
   string sts_token = 6 [json_name = "sts_token"];
   // region
   string region = 7 [json_name = "region"];
+  // type
+  S3StorageType type = 8 [json_name = "type"];
+  // whether to use tls
+  bool secure = 9 [json_name = "secure"];
+  // whether to check cert
+  bool cert_check = 10 [json_name = "cert_check"];
 }
 
 message GetInputDataRequest {

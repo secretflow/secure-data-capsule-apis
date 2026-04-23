@@ -45,8 +45,9 @@ jobs:
           name: "Verify proto"
           command: |
             set -ex
-            python3 -m pip install -r ./python/dev-requirements.txt
-            python3 protoc.py
+            pip install uv
+            cd python && uv sync --group dev && cd ..
+            cd python && uv run python ../protoc.py && cd ..
 
   linux_publish:
     docker:
@@ -61,11 +62,12 @@ jobs:
             source /root/miniconda3/etc/profile.d/conda.sh
             conda create -n build python=3.10 -y
             conda activate build
+            pip install uv
             cd python
-            python3 -m pip install -r dev-requirements.txt
+            uv sync --group dev
             make build
             ls dist/*.whl
-            python3 -m twine upload -r pypi -u __token__ -p ${PYPI_TWINE_TOKEN} dist/*.whl 
+            uv run twine upload -r pypi -u __token__ -p ${PYPI_TWINE_TOKEN} dist/*.whl 
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
