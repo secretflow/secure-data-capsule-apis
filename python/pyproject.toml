@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sdc-apis"
+dynamic = ["version"]
+description = "SecretFlow Data Capsule apis proto generated python"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "secretflow", email = "secretflow-contact@service.alipay.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "betterproto>=2.0.0b7",
+]
+
+[project.urls]
+Homepage = "https://github.com/secretflow/secure-data-capsule-apis"
+
+[tool.hatch.version]
+path = "_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["secretflowapis"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["secretflowapis"]
+
+[dependency-groups]
+dev = [
+    "betterproto[compiler]>=2.0.0b7",
+    "grpcio-tools",
+    "twine>=5.1",
+]
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
+
+# some internal packages
+[[tool.uv.index]]
+name = "antgroup"
+url = "https://artifacts.antgroup-inc.cn/artifact/repositories/simple-dev/"

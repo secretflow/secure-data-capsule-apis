@@ -1,12 +1,12 @@
 init:
-	pip install -r requirements.txt
+	uv sync --group dev
 
 build:
-	python ../protoc.py
-	find ./secretflowapis -maxdepth 10 -type d -exec cp __init__.py {} \;
-	python setup.py clean
-	python setup.py sdist bdist_wheel
-	twine check dist/*
+	uv run python ../protoc.py
+	touch ./secretflowapis/__init__.py
+	python -c "from datetime import date; v='0.4.0.dev'+date.today().strftime('%Y%m%d'); open('_version.py','w').write(f'__version__ = \"{v}\"\n')"
+	uv build
+	uv run twine check dist/*
 
 rebuild:
 	make clean
