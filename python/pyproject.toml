@@ -39,3 +39,7 @@ dev = [
     "grpcio-tools",
     "twine>=5.1",
 ]
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
